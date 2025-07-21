@@ -44,13 +44,16 @@ public class AuthService {
         }
         // Create a token ()
 //        String token = RandomStringUtils.randomAscii(20);
-        String token = jwtService.generateToken(user.getEmail());
+        Map token = jwtService.generateToken(user.getEmail());
+        Long expiringAt = Long.parseLong(token.get("expiringAt").toString());
+        String tokenString = token.get("token").toString();
         MultiValueMapAdapter<String, String> headers = new MultiValueMapAdapter<>(new HashMap<>());
-        headers.add("AUTH_TOKEN", token);
+        headers.add("AUTH_TOKEN", tokenString);
 
         Session session = new Session();
         session.setUser(user);
-        session.setToken(token);
+        session.setToken(tokenString);
+        session.setExpiringAt(new Date(expiringAt));
         session.setStatus(SessionStatus.ACTIVE);
         sessionRepository.save(session);
 
@@ -103,9 +106,11 @@ public class AuthService {
         User user = userRepository.findById(userId).get();
 
         UserDto userDto = UserDto.from(user);
-//        if(session.getExpiringAt().compareTo(new Date()) > 0){
-//            return SessionStatus.EXPIRED;
-//        }
+        if(session.getExpiringAt().compareTo(new Date()) <= 0){
+            session.setStatus(SessionStatus.EXPIRED);
+            sessionRepository.save(session);
+            return Optional.empty();
+        }
         return Optional.of(userDto);
     }
 

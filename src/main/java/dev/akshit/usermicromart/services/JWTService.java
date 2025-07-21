@@ -29,17 +29,21 @@ public class JWTService {
         }
     }
 
-    public String generateToken(String email) {
+    public Map<String, String> generateToken(String email) {
         Map<String, Object> claims = new HashMap<>();
-        return Jwts.builder()
+        Long expiringTime = System.currentTimeMillis() + 1000 * 60 * 60;
+        Map<String, String> tokens = new HashMap<>();
+        tokens.put("token", Jwts.builder()
                 .claims()
                 .add(claims)
                 .subject(email)
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() * 60 * 60 * 60))
+                .expiration(new Date(expiringTime))
                 .and()
                 .signWith(getKey())
-                .compact();
+                .compact());
+        tokens.put("expiringAt", String.valueOf(expiringTime));
+        return tokens;
     }
 
     private Key getKey() {
