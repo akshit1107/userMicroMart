@@ -2,10 +2,13 @@ package dev.akshit.usermicromart.services;
 
 import dev.akshit.usermicromart.dtos.UserDto;
 import dev.akshit.usermicromart.enums.SessionStatus;
+import dev.akshit.usermicromart.exceptions.RoleDoNotExistsException;
 import dev.akshit.usermicromart.exceptions.UserAlreadyExistsException;
 import dev.akshit.usermicromart.exceptions.UserDoesNotExistException;
+import dev.akshit.usermicromart.models.Role;
 import dev.akshit.usermicromart.models.Session;
 import dev.akshit.usermicromart.models.User;
+import dev.akshit.usermicromart.repositories.RoleRepository;
 import dev.akshit.usermicromart.repositories.SessionRepository;
 import dev.akshit.usermicromart.repositories.UserRepository;
 //import org.apache.commons.lang3.RandomStringUtils;
@@ -23,14 +26,16 @@ public class AuthService {
     private UserRepository userRepository;
     private SessionRepository sessionRepository;
     private BCryptPasswordEncoder bCryptPasswordEncoder;
+    private RoleRepository roleRepository;
 
     private JWTService jwtService;
 
-    public AuthService(UserRepository userRepository, SessionRepository sessionRepository, JWTService jwtService) {
+    public AuthService(UserRepository userRepository, SessionRepository sessionRepository, JWTService jwtService, RoleRepository roleRepository) {
         this.userRepository = userRepository;
         this.sessionRepository = sessionRepository;
         this.bCryptPasswordEncoder = new BCryptPasswordEncoder();
         this.jwtService = jwtService;
+        this.roleRepository = roleRepository;
     }
 
     public ResponseEntity<UserDto> logIn(String email, String password) throws UserDoesNotExistException {
@@ -78,7 +83,7 @@ public class AuthService {
         return ResponseEntity.ok().build();
     }
 
-    public UserDto signUp(String email, String password) throws UserAlreadyExistsException {
+    public UserDto signUp(String email, String password, Set<String> userRole) throws UserAlreadyExistsException, RoleDoNotExistsException {
 
         Optional<User> userOptinal = userRepository.findByEmail(email);
         if(!userOptinal.isEmpty()){
@@ -88,8 +93,23 @@ public class AuthService {
         user.setEmail(email);
         user.setPassword(this.bCryptPasswordEncoder.encode(password));
 
+        Set<Role> roles = roleRepository.findByNameIn(userRole);
+
+        if(roles.isEmpty()){
+            throw new RoleDoNotExistsException("Role(s) does not exist.");
+        }
+
+//        roles.stream().
+
+        user.setRoles(roles);
+
         User savedUser = userRepository.save(user);
+
+        // Assign the role to the user
+
+
         UserDto userDto = UserDto.from(savedUser);
+        userDto.setRoles(roles);
         return userDto;
     }
 
@@ -106,6 +126,7 @@ public class AuthService {
         User user = userRepository.findById(userId).get();
 
         UserDto userDto = UserDto.from(user);
+
         if(session.getExpiringAt().compareTo(new Date()) <= 0){
             session.setStatus(SessionStatus.EXPIRED);
             sessionRepository.save(session);

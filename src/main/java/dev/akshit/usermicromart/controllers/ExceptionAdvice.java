@@ -1,5 +1,6 @@
 package dev.akshit.usermicromart.controllers;
 
+import dev.akshit.usermicromart.exceptions.RoleDoNotExistsException;
 import dev.akshit.usermicromart.exceptions.UserAlreadyExistsException;
 import dev.akshit.usermicromart.exceptions.UserDoesNotExistException;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,13 @@ public class ExceptionAdvice {
 
     @ExceptionHandler(UserDoesNotExistException.class)
     public ResponseEntity<ErrorResponse> handleUserDoesNotExistException(UserDoesNotExistException exception) {
+        ErrorResponse errorResponse = new ErrorResponse();
+        errorResponse.setErrorMessage(exception.getMessage());
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(RoleDoNotExistsException.class)
+    public ResponseEntity<ErrorResponse> handleRoleDoNotExistsException(RoleDoNotExistsException exception) {
         ErrorResponse errorResponse = new ErrorResponse();
         errorResponse.setErrorMessage(exception.getMessage());
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
